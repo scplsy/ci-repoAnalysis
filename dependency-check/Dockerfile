@@ -1,4 +1,4 @@
-FROM owasp/dependency-check:10.0.4
+FROM owasp/dependency-check:12.1.6
 
 COPY bkrepo-dependency-check /bkrepo-dependency-check
 
