@@ -6,9 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
-	"github.com/hashicorp/go-retryablehttp"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 // analystTemporaryPrefix 制品分析服务接口前缀
@@ -120,6 +121,7 @@ func (c *BkRepoClient) Finish(cancel context.CancelFunc, toolOutput *object.Tool
 	c.ToolInput = nil
 }
 
+// Failed 分析失败，上报结果
 func (c *BkRepoClient) Failed(cancel context.CancelFunc, err error) {
 	util.Error("analyze failed %s", err)
 	output := object.NewFailedOutput(err)
@@ -162,7 +164,8 @@ func (c *BkRepoClient) createDownloader() (util.Downloader, error) {
 
 // updateSubtaskStatus 更新任务状态为执行中
 func (c *BkRepoClient) updateSubtaskStatus() error {
-	reqUrl := c.Args.Url + analystTemporaryPrefix + "/scan/subtask/" + c.ToolInput.TaskId + "/status?token=" + c.Args.Token + "&status=EXECUTING"
+	reqUrl := c.Args.Url + analystTemporaryPrefix + "/scan/subtask/" +
+		c.ToolInput.TaskId + "/status?token=" + c.Args.Token + "&status=EXECUTING"
 	request, err := retryablehttp.NewRequest("PUT", reqUrl, nil)
 	if err != nil {
 		return err

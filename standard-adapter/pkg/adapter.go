@@ -9,6 +9,7 @@ import (
 	"os"
 )
 
+// CmdBuilder 扫描执行器命令生成器
 type CmdBuilder interface {
 	// Build 生成扫描执行器启动命令, 返回（命令名，参数列表）
 	Build(input *object.ToolInput) (string, []string, error)
