@@ -4,22 +4,29 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"context"
 	"errors"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
-	"github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"io"
 	"os"
 	"path"
 	"regexp"
 	"strings"
+
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
+	"github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
 // FilepathSearch 文件路径匹配工具
 type FilepathSearch struct{}
 
 // Execute 执行扫描，在镜像tar包中搜索匹配指定正则表达式的路径
-func (e FilepathSearch) Execute(config *object.ToolConfig, file *os.File) (*object.ToolOutput, error) {
+func (e FilepathSearch) Execute(
+	ctx context.Context,
+	config *object.ToolConfig,
+	file *os.File,
+) (*object.ToolOutput, error) {
 	regStr := config.GetStringArg("regex")
 	if len(regStr) == 0 {
 		return nil, errors.New("regex config not found")
@@ -35,6 +42,7 @@ func (e FilepathSearch) Execute(config *object.ToolConfig, file *os.File) (*obje
 		&object.Result{
 			SecurityResults: securityResults,
 		},
+		util.Metrics(ctx),
 	), nil
 }
 

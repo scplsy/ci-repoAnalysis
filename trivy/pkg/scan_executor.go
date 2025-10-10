@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
-	"github.com/TencentBlueKing/ci-repoAnalysis/trivy/pkg/constant"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
+	"github.com/TencentBlueKing/ci-repoAnalysis/trivy/pkg/constant"
 )
 
 // TrivyExecutor Trivy分析工具执行器实现
@@ -23,15 +24,17 @@ func (e TrivyExecutor) Execute(ctx context.Context, config *object.ToolConfig, f
 		offline = len(config.GetStringArg(constant.ArgDbDownloadUrl)) > 0
 	}
 	if offline {
+		stop := util.StartTimer(ctx, "downloadAllDBTime")
 		if err := downloadAllDB(config); err != nil {
 			return nil, err
 		}
+		stop()
 	}
 
 	if err := execTrivy(ctx, file.Name(), offline, config); err != nil {
 		return nil, err
 	}
-	return transformOutputJson()
+	return transformOutputJson(util.Metrics(ctx))
 }
 
 func downloadAllDB(config *object.ToolConfig) error {
@@ -106,7 +109,7 @@ func execTrivy(ctx context.Context, fileName string, offline bool, config *objec
 	return nil
 }
 
-func transformOutputJson() (*object.ToolOutput, error) {
+func transformOutputJson(metrics map[string]any) (*object.ToolOutput, error) {
 	trivyOutputContent, err := os.ReadFile(constant.OutputPath)
 	if err != nil {
 		return nil, err
@@ -117,5 +120,5 @@ func transformOutputJson() (*object.ToolOutput, error) {
 		return nil, err
 	}
 
-	return object.NewOutput(object.StatusSuccess, ConvertToToolResults(trivyOutput)), nil
+	return object.NewOutput(object.StatusSuccess, ConvertToToolResults(trivyOutput), metrics), nil
 }

@@ -6,7 +6,7 @@ import (
 )
 
 func TestTransform(t *testing.T) {
-	result, _ := transform("testdata/result.json")
+	result, _ := transform("testdata/result.json", nil)
 	fmt.Println(result.Result.LicenseResults[0].Path)
 	fmt.Println(result.Result.LicenseResults[0].LicenseName)
 }

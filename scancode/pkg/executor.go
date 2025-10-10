@@ -1,19 +1,21 @@
 package pkg
 
 import (
+	"context"
 	"encoding/json"
+	"os"
+
 	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
 	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
-	"os"
 )
 
 // Scancode 扫描器
 type Scancode struct{}
 
 // Execute 执行扫描
-func (e Scancode) Execute(config *object.ToolConfig, file *os.File) (*object.ToolOutput, error) {
+func (e Scancode) Execute(ctx context.Context, config *object.ToolConfig, file *os.File) (*object.ToolOutput, error) {
 	//extractcode /path/to/inputFile
-	if err := util.ExecAndLog("extractcode", []string{file.Name()}, ""); err != nil {
+	if err := util.ExecAndLog(ctx, "extractcode", []string{file.Name()}, ""); err != nil {
 		return nil, err
 	}
 	util.Info("success extract file %s", file.Name())
@@ -30,15 +32,15 @@ func (e Scancode) Execute(config *object.ToolConfig, file *os.File) (*object.Too
 		file.Name() + "-extract",
 	}
 
-	if err := util.ExecAndLog("scancode", args, ""); err != nil {
+	if err := util.ExecAndLog(ctx, "scancode", args, ""); err != nil {
 		return nil, err
 	}
 
-	return transform(resultFile)
+	return transform(resultFile, util.Metrics(ctx))
 }
 
 // transform 转换输出报告为标准格式
-func transform(reportFile string) (*object.ToolOutput, error) {
+func transform(reportFile string, metrics map[string]any) (*object.ToolOutput, error) {
 	reportContent, err := os.ReadFile(reportFile)
 	if err != nil {
 		return nil, err
@@ -49,5 +51,5 @@ func transform(reportFile string) (*object.ToolOutput, error) {
 		return nil, err
 	}
 
-	return object.NewOutput(object.StatusSuccess, Convert(report)), nil
+	return object.NewOutput(object.StatusSuccess, Convert(report), metrics), nil
 }

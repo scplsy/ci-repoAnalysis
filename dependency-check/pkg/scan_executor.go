@@ -1,13 +1,15 @@
 package pkg
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
 	"os"
 	"path/filepath"
+
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
 )
 
 const PackageTypeNpm = "NPM"
@@ -16,7 +18,11 @@ const PackageTypeNpm = "NPM"
 type DependencyCheckExecutor struct{}
 
 // Execute 执行分析
-func (e DependencyCheckExecutor) Execute(config *object.ToolConfig, file *os.File) (*object.ToolOutput, error) {
+func (e DependencyCheckExecutor) Execute(
+	ctx context.Context,
+	config *object.ToolConfig,
+	file *os.File,
+) (*object.ToolOutput, error) {
 	offline, err := config.GetBoolArg(ConfigOffline)
 	if err != nil {
 		return nil, err
@@ -24,13 +30,14 @@ func (e DependencyCheckExecutor) Execute(config *object.ToolConfig, file *os.Fil
 
 	inputFile := file.Name()
 	if config.GetStringArg(util.ArgKeyPkgType) == PackageTypeNpm {
-		if err := npmPrepare(file); err != nil {
+		if err := npmPrepare(ctx, file); err != nil {
 			return nil, err
 		}
 		inputFile = filepath.Join(filepath.Dir(inputFile), "package-lock.json")
 	}
 
 	// 下载漏洞库
+	stop := util.StartTimer(ctx, "downloadDBTime")
 	downloader := &util.DefaultDownloader{}
 	dbUrl := config.GetStringArg(ConfigDbUrl)
 	if len(dbUrl) > 0 {
@@ -38,22 +45,25 @@ func (e DependencyCheckExecutor) Execute(config *object.ToolConfig, file *os.Fil
 			return nil, err
 		}
 	}
+	stop()
 
 	// 执行扫描
-	reportFile, err := doExecute(inputFile, offline)
+	reportFile, err := doExecute(ctx, inputFile, offline)
 	if err != nil {
 		return nil, err
 	}
-	return transform(reportFile)
+	return transform(reportFile, util.Metrics(ctx))
 }
 
-func npmPrepare(file *os.File) error {
+func npmPrepare(ctx context.Context, file *os.File) error {
+	stop := util.StartTimer(ctx, "npmPrepareTime")
+	defer stop()
 	fileAbsPath := file.Name()
 	fileBaseName := filepath.Base(fileAbsPath)
 	workDir := filepath.Dir(fileAbsPath)
 
 	// npm install
-	if err := util.ExecAndLog("npm", []string{"install", file.Name()}, workDir); err != nil {
+	if err := util.ExecAndLog(ctx, "npm", []string{"install", file.Name()}, workDir); err != nil {
 		return err
 	}
 
@@ -75,10 +85,10 @@ func npmPrepare(file *os.File) error {
 		"s|\\\"%s\\\": \\\"file:%s\\\"|\\\"%s\\\": \\\"%s\\\"|",
 		pkgName, fileBaseName, pkgName, pkgVersion,
 	)
-	if err := sed(sedExp, filepath.Join(workDir, "package-lock.json")); err != nil {
+	if err := sed(ctx, sedExp, filepath.Join(workDir, "package-lock.json")); err != nil {
 		return err
 	}
-	if err := sed(sedExp, filepath.Join(workDir, "package.json")); err != nil {
+	if err := sed(ctx, sedExp, filepath.Join(workDir, "package.json")); err != nil {
 		return err
 	}
 
@@ -86,22 +96,22 @@ func npmPrepare(file *os.File) error {
 		"s|\\\"version\\\": \\\"file:%s\\\"|\\\"version\\\": \\\"%s\\\"|",
 		fileBaseName, pkgVersion,
 	)
-	if err := sed(sedExp, filepath.Join(workDir, "package-lock.json")); err != nil {
+	if err := sed(ctx, sedExp, filepath.Join(workDir, "package-lock.json")); err != nil {
 		return err
 	}
 	return nil
 }
 
-func sed(exp string, fileAbsPath string) error {
+func sed(ctx context.Context, exp string, fileAbsPath string) error {
 	args := []string{"-i", exp, fileAbsPath}
-	if err := util.ExecAndLog("sed", args, ""); err != nil {
+	if err := util.ExecAndLog(ctx, "sed", args, ""); err != nil {
 		return err
 	}
 	return nil
 }
 
 // doExecute 执行扫描，扫描成功后返回报告路径
-func doExecute(inputFile string, offline bool) (string, error) {
+func doExecute(ctx context.Context, inputFile string, offline bool) (string, error) {
 	// dependency-check.sh --scan /src --format JSON --out /report
 
 	const reportFile = "/report"
@@ -117,7 +127,7 @@ func doExecute(inputFile string, offline bool) (string, error) {
 			"--disableYarnAudit", "--disablePnpmAudit", "--disableNodeAudit", "--disableOssIndex", "--disableCentral")
 	}
 
-	if err := util.ExecAndLog(CMDDependencyCheck, args, ""); err != nil {
+	if err := util.ExecAndLog(ctx, CMDDependencyCheck, args, ""); err != nil {
 		return "", err
 	}
 
@@ -125,7 +135,7 @@ func doExecute(inputFile string, offline bool) (string, error) {
 }
 
 // transform 转换DependencyCheck输出的报告为制品库扫描结果格式
-func transform(reportFile string) (*object.ToolOutput, error) {
+func transform(reportFile string, metrics map[string]any) (*object.ToolOutput, error) {
 	reportContent, err := os.ReadFile(reportFile)
 	if err != nil {
 		return nil, err
@@ -136,5 +146,5 @@ func transform(reportFile string) (*object.ToolOutput, error) {
 		return nil, err
 	}
 
-	return object.NewOutput(object.StatusSuccess, Convert(report)), nil
+	return object.NewOutput(object.StatusSuccess, Convert(report), metrics), nil
 }
