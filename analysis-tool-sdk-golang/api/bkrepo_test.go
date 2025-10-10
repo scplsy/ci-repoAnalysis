@@ -3,12 +3,13 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
 	"net"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
 )
 
 func TestPullTask(t *testing.T) {
@@ -67,7 +68,7 @@ func TestHeartbeat(t *testing.T) {
 	client.ToolInput = &object.ToolInput{}
 	client.ToolInput.TaskId = os.Getenv("TASK_ID")
 	ctx, cancel := context.WithCancel(context.Background())
-	go client.heartbeat(ctx)
+	go client.heartbeat(ctx, cancel)
 	time.Sleep(10 * time.Second)
 	cancel()
 	time.Sleep(5 * time.Second)

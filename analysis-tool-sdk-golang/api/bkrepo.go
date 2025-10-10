@@ -63,6 +63,7 @@ func GetClient(args *object.Arguments) *BkRepoClient {
 // Start 开始分析
 func (c *BkRepoClient) Start(ctx context.Context, cancel context.CancelFunc) (*object.ToolInput, error) {
 	if c.ToolInput == nil {
+		stop := util.StartTimer(ctx, "initTime")
 		if err := c.initToolInput(); err != nil {
 			return nil, err
 		}
@@ -78,6 +79,7 @@ func (c *BkRepoClient) Start(ctx context.Context, cancel context.CancelFunc) (*o
 			}
 			util.Info("update subtask status success")
 		}
+		stop()
 	}
 	return c.ToolInput, nil
 }
@@ -122,9 +124,9 @@ func (c *BkRepoClient) Finish(cancel context.CancelFunc, toolOutput *object.Tool
 }
 
 // Failed 分析失败，上报结果
-func (c *BkRepoClient) Failed(cancel context.CancelFunc, err error) {
+func (c *BkRepoClient) Failed(metrics map[string]any, cancel context.CancelFunc, err error) {
 	util.Error("analyze failed %s", err)
-	output := object.NewFailedOutput(err)
+	output := object.NewFailedOutput(err, metrics)
 	c.Finish(cancel, output)
 }
 

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+
 	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/api"
 	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
 	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/util"
-	"os"
 )
 
 // Executor 分析执行器
@@ -37,9 +38,10 @@ func Analyze(executor Executor) {
 }
 
 func doAnalyze(executor Executor, arguments *object.Arguments) {
-	client := api.GetClient(arguments)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := util.NewRootContext()
 	defer cancel()
+
+	client := api.GetClient(arguments)
 	input, err := client.Start(ctx, cancel)
 	if err != nil {
 		panic("Start analyze failed: " + err.Error())
@@ -48,29 +50,34 @@ func doAnalyze(executor Executor, arguments *object.Arguments) {
 		util.Info("no subtask found, exit")
 		return
 	}
+	stop := util.StartTimer(ctx, "generateInputFileTime")
 	file, err := client.GenerateInputFile()
 	if err != nil {
-		client.Failed(cancel, errors.New("Generate input file failed: "+err.Error()))
+		client.Failed(util.Metrics(ctx), cancel, errors.New("Generate input file failed: "+err.Error()))
 		return
 	}
 	// 返回的file为nil时表示文件被忽略，直接返回
 	if file == nil {
 		util.Info("Unsupported filename: %s", input.FileUrls[0].Name)
-		client.Finish(cancel, object.NewOutput(object.StatusSuccess, new(object.Result)))
+		client.Finish(cancel, object.NewOutput(object.StatusSuccess, new(object.Result), util.Metrics(ctx)))
 		return
 	}
+	stop()
 	defer file.Close()
 	util.Info("generate input file success")
-	execCtx, execCancel := context.WithTimeout(ctx, client.ToolInput.MaxTime())
+	execCtx, execCancel := util.NewTimeoutContext(ctx, client.ToolInput.MaxTime())
 	defer execCancel()
+	stop = util.StartTimer(ctx, "executeTime")
 	output, err := executor.Execute(execCtx, &input.ToolConfig, file)
+	stop()
 	if err != nil {
 		errMsg := "Execute analysis failed: " + err.Error()
 		if ctx.Err() != nil {
 			errMsg = fmt.Sprintf("%s, ctx err[%s]", errMsg, ctx.Err().Error())
 		}
-		client.Failed(cancel, errors.New(errMsg))
+		client.Failed(util.Metrics(ctx), cancel, errors.New(errMsg))
 	} else {
+		output.Metrics = util.Metrics(ctx)
 		client.Finish(cancel, output)
 	}
 }

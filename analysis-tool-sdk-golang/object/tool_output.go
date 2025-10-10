@@ -18,10 +18,11 @@ const (
 
 // ToolOutput 工具输出
 type ToolOutput struct {
-	Status TaskStatus `json:"status"`
-	Err    string     `json:"err"`
-	TaskId string     `json:"taskId"`
-	Result *Result    `json:"result"`
+	Status  TaskStatus     `json:"status"`
+	Err     string         `json:"err"`
+	TaskId  string         `json:"taskId"`
+	Result  *Result        `json:"result"`
+	Metrics map[string]any `json:"metrics"`
 }
 
 // Result 工具扫描结果
@@ -72,17 +73,19 @@ func NewErrorOutput(err error, status TaskStatus) *ToolOutput {
 }
 
 // NewFailedOutput 创建错误输出
-func NewFailedOutput(err error) *ToolOutput {
+func NewFailedOutput(err error, metrics map[string]any) *ToolOutput {
 	return &ToolOutput{
-		Status: StatusFailed,
-		Err:    err.Error(),
+		Status:  StatusFailed,
+		Err:     err.Error(),
+		Metrics: metrics,
 	}
 }
 
 // NewOutput 创建工具标准输出
-func NewOutput(status TaskStatus, result *Result) *ToolOutput {
+func NewOutput(status TaskStatus, result *Result, metrics map[string]any) *ToolOutput {
 	return &ToolOutput{
-		Status: status,
-		Result: result,
+		Status:  status,
+		Result:  result,
+		Metrics: metrics,
 	}
 }
