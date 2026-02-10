@@ -9,13 +9,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/TencentBlueKing/ci-repoAnalysis/analysis-tool-sdk-golang/object"
 )
 
 const ArgKeyDownloaderWorkerCount = "downloaderWorker"
@@ -131,6 +132,10 @@ func Extract(reader io.Reader, dstDir string, perm fs.FileMode) error {
 		}
 
 		p := filepath.Join(dstDir, header.Name)
+		// 防止 Zip Slip 路径遍历攻击，确保解压路径在目标目录下
+		if !strings.HasPrefix(filepath.Clean(p), filepath.Clean(dstDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path in archive: %s", header.Name)
+		}
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if err := os.Mkdir(p, perm); err != nil {
