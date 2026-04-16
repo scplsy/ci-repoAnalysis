@@ -66,7 +66,17 @@ func GenerateInputFile(toolInput *object.ToolInput, downloader Downloader) (*os.
 			// 不支持的文件类型直接返回
 			return nil, err
 		}
-		file, err := os.Create(filepath.Join(WorkDir, fileUrl.Name))
+		// 防止路径遍历攻击：仅取文件名部分，丢弃所有目录路径
+		safeName := filepath.Base(filepath.Clean(fileUrl.Name))
+		if safeName == "." || safeName == string(os.PathSeparator) {
+			return nil, fmt.Errorf("invalid file name: %s", fileUrl.Name)
+		}
+		targetPath := filepath.Join(WorkDir, safeName)
+		// 二次校验：确保目标路径在 WorkDir 内
+		if !strings.HasPrefix(filepath.Clean(targetPath), filepath.Clean(WorkDir)+string(os.PathSeparator)) {
+			return nil, fmt.Errorf("illegal file path: %s", fileUrl.Name)
+		}
+		file, err := os.Create(targetPath)
 		if err != nil {
 			return nil, err
 		}
