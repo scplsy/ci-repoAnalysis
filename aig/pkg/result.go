@@ -1,5 +1,5 @@
 // Package pkg 实现 analysis-tool-sdk-golang 中定义的 Executor 接口，
-// 把开源 AIG（AI-Infra-Guard）的 mcp_scan 能力包装为蓝鲸制品库扫描工具。
+// 把 AIG（AI-Infra-Guard）的 mcp_scan 能力包装为蓝鲸制品库扫描工具。
 package pkg
 
 import (

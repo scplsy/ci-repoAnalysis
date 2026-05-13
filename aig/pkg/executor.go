@@ -40,7 +40,7 @@ const (
 )
 
 // AigExecutor 实现 framework.Executor 接口，
-// 调用开源 AI-Infra-Guard 服务对 MCP 源码包进行安全扫描。
+// 调用 AI-Infra-Guard 服务对 MCP 源码包进行安全扫描。
 type AigExecutor struct{}
 
 // Execute 执行扫描。

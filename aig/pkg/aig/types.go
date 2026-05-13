@@ -1,4 +1,4 @@
-// Package aig 提供与开源 AI-Infra-Guard（https://github.com/Tencent/AI-Infra-Guard）
+// Package aig 提供与 AI-Infra-Guard（https://github.com/Tencent/AI-Infra-Guard）
 // 后端服务交互的 HTTP 客户端，覆盖文件上传、创建 mcp_scan 任务、查询任务状态
 // 与拉取扫描结果的完整流程。
 package aig
@@ -50,7 +50,7 @@ const (
 	DefaultLanguage      = "zh"
 )
 
-// Envelope 是开源 AIG 所有 API 的统一外层响应结构。
+// Envelope 是 AIG 所有 API 的统一外层响应结构。
 //
 //	{
 //	  "status": 0,             // 0=success, 1=fail
@@ -129,7 +129,7 @@ type Issue struct {
 	Suggestion  string `json:"suggestion,omitempty"`
 }
 
-// ModelConfig 表示开源 AIG 任务请求中的 LLM 模型配置。
+// ModelConfig 表示 AIG 任务请求中的 LLM 模型配置。
 //
 // AIG 的 mcp_scan 任务在 server 端需要 Model / Token / BaseURL **三者全部**
 // 非空才能成功调用 LLM：

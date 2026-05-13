@@ -1,6 +1,6 @@
-## AIG MCP 源码扫描器（开源版）
+## AIG MCP 源码扫描器
 
-基于 [analysis-tool-sdk-golang](https://github.com/TencentBlueKing/ci-repoAnalysis/tree/master/analysis-tool-sdk-golang) 实现的蓝鲸制品库 standard 扫描器，对接开源版本的 [Tencent/AI-Infra-Guard](https://github.com/Tencent/AI-Infra-Guard) `mcp_scan` 任务。
+基于 [analysis-tool-sdk-golang](https://github.com/TencentBlueKing/ci-repoAnalysis/tree/master/analysis-tool-sdk-golang) 实现的蓝鲸制品库 standard 扫描器，对接 [Tencent/AI-Infra-Guard](https://github.com/Tencent/AI-Infra-Guard) `mcp_scan` 任务。
 
 工作流程：
 
